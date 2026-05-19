@@ -1,10 +1,15 @@
 require("dotenv").config();
 
 const express = require("express");
+const { Readable } = require("stream");
+const { request } = require("undici");
+const { VibeSync } = require("vibesync");
+
 const {
   Client,
   GatewayIntentBits,
-  ActivityType
+  ActivityType,
+  PermissionsBitField
 } = require("discord.js");
 
 const {
@@ -37,112 +42,418 @@ const BOT_STATION_NAME = "6 Hub 92.0";
 const stations = [
   {
     name: "Flash FM / GTA Vice City",
+    shortName: "Flash FM",
     note: null,
+    durationSeconds: 4598,
     intro: "https://drive.google.com/uc?export=download&id=142Ui69r2quINmgUVmdcEUyKdSzRCcXqF",
-    main: "https://drive.google.com/uc?export=download&id=1RyFyb9hogR9dupm6QUBDKXpbeKp90zAu"
+    main: "https://drive.google.com/uc?export=download&id=1RyFyb9hogR9dupm6QUBDKXpbeKp90zAu",
+    songs: [
+      [8, "Hall and Oates — Out of Touch"],
+      [255, "Wang Chung — Dance Hall Days"],
+      [450, "Michael Jackson — Billie Jean"],
+      [700, "Laura Branigan — Self Control"],
+      [979, "Go West — Call Me"],
+      [1186, "INXS — Kiss the Dirt (Falling Down the Mountain)"],
+      [1471, "Bryan Adams — Run to You"],
+      [1681, "Electric Light Orchestra — Four Little Diamonds"],
+      [1916, "Yes — Owner of a Lonely Heart"],
+      [2169, "The Buggles — Video Killed the Radio Star"],
+      [2367, "Aneka — Japanese Boy"],
+      [2671, "Talk Talk — Life’s What You Make It"],
+      [2885, "The Outfield — Your Love"],
+      [3173, "Joe Jackson — Steppin' Out"],
+      [3369, "The Fixx — One Thing Leads to Another"],
+      [3588, "Lionel Richie — Running with the Night"],
+      [3782, "Boys Don't Cry — I Wanna Be a Cowboy"],
+      [4136, "Glenn Frey — Smuggler's Blues"],
+      [4362, "Toto — Hold the Line"]
+    ]
   },
   {
     name: "Non-Stop Pop FM / GTA V",
+    shortName: "Non-Stop Pop FM",
     note: "6 Hub Cut - Includes Deleted Songs",
+    durationSeconds: 13878,
     intro: "https://drive.google.com/uc?export=download&id=1deMQNOwapCDPf1JIfPESZPE_U4KWZ4B6",
-    main: "https://drive.google.com/uc?export=download&id=1JcNsPlQQG_ZHUjsqvJ0erlZzsYlt57KP"
+    main: "https://drive.google.com/uc?export=download&id=1JcNsPlQQG_ZHUjsqvJ0erlZzsYlt57KP",
+    songs: [
+      [6, "Fergie feat. Ludacris — Glamorous"],
+      [245, "Real Life — Send Me An Angel '89"],
+      [480, "Corona — The Rhythm of the Night"],
+      [703, "Kelly Rowland — Work"],
+      [895, "Simply Red — Something Got Me Started"],
+      [1128, "The Blow Monkeys & Kym Mazelle — Wait"],
+      [1325, "Backstreet Boys — I Want It That Way"],
+      [1547, "Dirty Vegas — Days Go By"],
+      [1843, "Moloko — The Time Is Now"],
+      [2070, "Amerie — 1 Thing"],
+      [2291, "Robbie Williams & Kylie Minogue — Kids"],
+      [2561, "Maroon 5 feat. Christina Aguilera — Moves like Jagger"],
+      [2772, "N-Joi — Anthem"],
+      [2977, "Wham! — Everything She Wants"],
+      [3209, "Mis-Teeq — Scandalous"],
+      [3449, "Mike Posner — Cooler Than Me"],
+      [3672, "Lady Gaga — Applause"],
+      [3894, "All Saints — Pure Shores"],
+      [4142, "Jamiroquai — Alright"],
+      [4362, "Modjo — Lady"],
+      [4577, "Lorde — Tennis Court"],
+      [4787, "Taylor Dayne — Tell It to My Heart"],
+      [4998, "Sly Fox — Let's Go All the Way"],
+      [5233, "Robyn feat. Kleerup — With Every Heartbeat"],
+      [5462, "Bobby Brown — On Our Own"],
+      [5731, "INXS — New Sensation"],
+      [5958, "Naked Eyes — Promises, Promises"],
+      [6189, "M.I.A. — Bad Girls"],
+      [6420, "Hall & Oates — Adult Education"],
+      [6697, "Sneaker Pimps — 6 Underground"],
+      [6920, "Rihanna — Only Girl"],
+      [7163, "Britney Spears — Gimme More"],
+      [7369, "The Black Eyed Peas — Meet Me Halfway"],
+      [7629, "Gorillaz feat. De La Soul — Feel Good Inc."],
+      [7864, "Living in a Box — Living in a Box"],
+      [8049, "M83 — Midnight City"],
+      [8264, "Bronski Beat — Smalltown Boy"],
+      [8540, "Morcheeba — Tape Loop"],
+      [8751, "Morcheeba — Tape Loop"],
+      [8980, "Pet Shop Boys — West End Girls"],
+      [9208, "Cassie — Me & U"],
+      [9405, "Jane Child — Don't Wanna Fall in Love"],
+      [9621, "Stardust — Music Sounds Better with You"],
+      [9865, "Neon Trees — Animal"],
+      [10088, "Cobra Starship feat. Sabi — You Make Me Feel..."],
+      [10298, "Belinda Carlisle — Circle in the Sand"],
+      [10535, "Tears for Fears — Everybody Wants to Rule the World"],
+      [10794, "Miike Snow — Animal"],
+      [11034, "Wilson Phillips — Hold On"],
+      [11253, "Michael Jackson — Jam"],
+      [11565, "Jamiroquai — Love Foolosophy"],
+      [11790, "Olivia Newton-John — Physical"],
+      [12020, "Enrique Iglesias feat. Pitbull — I Like It"],
+      [12261, "Estelle feat. Kanye West — American Boy"],
+      [12541, "Kevin Rudolf feat. Lil Wayne — Let It Rock"],
+      [12796, "Duran Duran — Serious"],
+      [13048, "Seal — Future Love Paradise"],
+      [13311, "Timbaland feat. Keri Hilson & D.O.E. — The Way I Are"],
+      [13494, "Kylie Minogue — Surrender"],
+      [13666, "The Supermen Lovers — Starlight"]
+    ]
   },
   {
     name: "Fever 105 / GTA Vice City",
+    shortName: "Fever 105",
     note: null,
+    durationSeconds: 3793,
     intro: "https://drive.google.com/uc?export=download&id=1afqoEPlj8-uFom4ArsZOTCLeqj3bCpuf",
-    main: "https://drive.google.com/uc?export=download&id=1GFaqToOqDu2jns0FiJGwimeMGLWUuVr1"
+    main: "https://drive.google.com/uc?export=download&id=1GFaqToOqDu2jns0FiJGwimeMGLWUuVr1",
+    songs: [
+      [4, "The Whispers — And the Beat Goes On"],
+      [271, "Fat Larry's Band — Act Like You Know"],
+      [560, "Oliver Cheatham — Get Down Saturday Night"],
+      [962, "Pointer Sisters — Automatic"],
+      [1240, "René & Angela — I'll Be Good"],
+      [1486, "Mary Jane Girls — All Night Long"],
+      [1821, "Rick James — Ghetto Life"],
+      [2079, "Michael Jackson — Wanna Be Startin' Somethin'"],
+      [2437, "Evelyn King — Shame"],
+      [2746, "Teena Marie — Behind the Groove"],
+      [2953, "Mtume — Juicy Fruit"],
+      [3225, "Kool & the Gang — Summer Madness"],
+      [3538, "Indeep — Last Night a D.J. Saved My Life"]
+    ]
   },
   {
     name: "Radio Los Santos / GTA V",
+    shortName: "Radio Los Santos",
     note: "6 Hub Cut - Includes Deleted Songs",
+    durationSeconds: 14428,
     intro: "https://drive.google.com/uc?export=download&id=1TOqqt5WlasITsE4FrrKtlf7CUa-_MWof",
-    main: "https://drive.google.com/uc?export=download&id=1oyt8ajgg35a3c2T_IX02SfocRo4CBvDT"
+    main: "https://drive.google.com/uc?export=download&id=1oyt8ajgg35a3c2T_IX02SfocRo4CBvDT",
+    songs: [
+      [10, "G-Side feat. G-Mane — Relaxin'"],
+      [202, "Kendrick Lamar — A.D.H.D"],
+      [400, "Ace Hood feat. Future & Rick Ross — Bugatti"],
+      [686, "Tia Corine — Coochie"],
+      [851, "Young Scooter feat. Trinidad James — I Can't Wait"],
+      [1036, "Tyler, The Creator feat. 42 Dugg — LEMONHEAD"],
+      [1168, "Young Stoner Life, Young Thug & Gunna — Ski"],
+      [1347, "ScHoolboy Q feat. Kendrick Lamar — Collard Greens"],
+      [1625, "Young Scooter feat. Gucci Mane — Work"],
+      [1916, "Kodak Black feat. Travis Scott & Offset — ZEZE"],
+      [2148, "Dr. Dre feat. Nipsey Hustle & Ty Dolla Sign — Diamond Mind"],
+      [2453, "Ab-Soul feat. ScHoolboy Q — Hunnid Stax"],
+      [2641, "Gangrene — Bassheads"],
+      [2849, "BJ the Chicago Kid feat. Freddie Gibbs & Problem — Smokin' and Ridin'"],
+      [3058, "Saweetie — My Type"],
+      [3218, "Big Sean & Hit-Boy — What a Life"],
+      [3399, "Chuck Inglish feat. Ab-Soul & Mac Miller — Came Thru/Easily"],
+      [3685, "Vince Staples feat. Juicy J — Big Fish"],
+      [3887, "A$AP Ferg — Plain Jane"],
+      [4074, "Marion Band$ feat. Nipsey Hussle — Hold Up"],
+      [4286, "Fredo Santana feat. Chief Keef, Ball Out & Tadoe — Go Live"],
+      [4584, "Clyde Carson feat. The Team — Slow Down"],
+      [4809, "Ab-Soul feat. Kendrick Lamar — Illuminate"],
+      [5089, "Travis Scott feat. 2 Chainz & T.I. — Upper Echelon"],
+      [5260, "2 Chainz feat. Ty Dolla $ign, Trey Songz & Jhené Aiko — It’s a Vibe"],
+      [5483, "Skeme — Millions"],
+      [5726, "Mozzy feat. YG — Hoppin’ Out"],
+      [5843, "The Game feat. 2 Chainz & Rick Ross — Ali Bomaye"],
+      [6124, "Freddie Gibbs — Still Livin'"],
+      [6342, "Danny Brown & Action Bronson — Bad News"],
+      [6486, "DJ Esco feat. Future — How It Was"],
+      [6730, "100s — Life of a Mack"],
+      [6917, "Migos — Stir Fry"],
+      [7144, "Kendrick Lamar — Swimming Pools"],
+      [7362, "Dr. Dre feat. THURZ & Cocoa Sarai — Fallin Up"],
+      [7595, "Mike Dean and Offset — So Fancy"],
+      [7751, "A$AP Rocky feat. Aston Matthews & Joey Fatts — R-Cali"],
+      [7893, "Mike Dean and Rich the Kid — Blue Cheese"],
+      [8089, "Dr. Dre feat. Anderson .Paak, Snoop Dogg & Busta Rhymes — ETA"],
+      [8331, "D-Block Europe & Offset — Chrome Hearts"],
+      [8578, "French Montana feat. Kodak Black — Lockjaw"],
+      [8808, "Danny Brown feat. A$AP Rocky & Zelooperz — Kush Coma"],
+      [9063, "Hit-Boy feat. Dom Kennedy — XL"],
+      [9333, "Polo G feat. Juice WRLD – Flex"],
+      [9506, "A$AP Ferg — Work"],
+      [9694, "Dr. Dre feat. Rick Ross & Anderson .Paak — The Scenic Route"],
+      [9894, "Freddie Gibbs & Mike Dean — Sellin' Dope"],
+      [10149, "NEZ feat. ScHoolboy Q — Let’s Get It"],
+      [10325, "Problem feat. Glasses Malone — Say That Then"],
+      [10498, "YG — I'm a Real 1"],
+      [10680, "Future feat. The Weeknd — Low Life"],
+      [11002, "Gucci Mane feat. Ciara — Too Hood"],
+      [11230, "Problem & IamSu feat. Bad Lucc & Sage The Gemini — Do It Big"],
+      [11439, "Future — Feed Me Dope"],
+      [11617, "Freddie Gibbs feat. Pusha T & Kevin Cossom — Miami Vice"],
+      [11852, "Dr. Dre — Black Privilege"],
+      [12021, "Gucci Mane feat. Trouble — Everyday"],
+      [12202, "Jay Rock feat. Kendrick Lamar — Hood Gone Love It"],
+      [12475, "Roddy Ricch — The Box"],
+      [12679, "Mount Westmore — Big Subwoofer"],
+      [12950, "Jay Rock feat. Kendrick Lamar — Wow Freestyle"],
+      [13124, "Dr. Dre feat. Eminem — Gospel"],
+      [13337, "Freddie Gibbs feat. Juicy J — Pick the Phone Up"],
+      [13568, "Cordae — Kung Fu"],
+      [13777, "Miguel — Adorn"],
+      [13988, "E-40 feat. Slim Thug & Bun B — That Candy Paint"],
+      [14301, "Young Jeezy feat. Freddie Gibbs — Rough"]
+    ]
   },
   {
     name: "West Coast Classics / GTA V",
+    shortName: "West Coast Classics",
     note: "6 Hub Cut - Includes Deleted Songs",
+    durationSeconds: 15512,
     intro: "https://drive.google.com/uc?export=download&id=1B9RTY_8rTIgeD_4QaC4_JB065FQRJFWj",
-    main: "https://drive.google.com/uc?export=download&id=1xRFSna24Q44rGTzT91NMrXDXSAnmJc2r"
+    main: "https://drive.google.com/uc?export=download&id=1xRFSna24Q44rGTzT91NMrXDXSAnmJc2r",
+    songs: [
+      [6, "The Conscious Daughters — We Roll Deep"],
+      [235, "Obie Trice feat. Dr. Dre & Eminem — Shit Hits the Fan"],
+      [537, "40 Glocc — Papa's Lil Soldier"],
+      [752, "50 Cent feat. Mobb Deep — Outta Control"],
+      [1003, "Compton's Most Wanted — Late Night Hype"],
+      [1249, "Dr. Dre feat. Hittman, Six-Two, Nate Dogg & Kurupt — Xxplosive"],
+      [1471, "Warren G — This D.J."],
+      [1673, "Luniz feat. Michael Marshall — I Got 5 on It"],
+      [1929, "Dr. Dre feat. Snoop Dogg, Kurupt & Nate Dogg — The Next Episode"],
+      [2096, "Kausion feat. Ice Cube — What You Wanna Do?"],
+      [2335, "Dr. Dre feat. Daz & Snoop Dogg — Lil' Ghetto Boy"],
+      [2668, "The Lady of Rage feat. Snoop Dogg — Afro Puffs"],
+      [2957, "Geto Boys — Mind Playing Tricks on Me"],
+      [3235, "DJ Quik — Dollaz + Sense"],
+      [3483, "Jay-Z — Trouble"],
+      [3782, "Eazy-E feat. Ice Cube — No More ?'s"],
+      [4014, "Ice Cube — You Know How We Do It"],
+      [4234, "Dr. Dre feat. Snoop Dogg — Still D.R.E."],
+      [4481, "Snoop Dogg — Gin and Juice"],
+      [4707, "50 Cent — In da Club"],
+      [4908, "Sam Sneed feat. Dr. Dre — U Better Recognize"],
+      [5155, "Blackstreet feat. Dr. Dre & Queen Pen — No Diggity"],
+      [5474, "Too $hort — So You Want to Be a Gangster"],
+      [5666, "Bone Thugs-n-Harmony — 1st of tha Month"],
+      [5955, "2Pac — Ambitionz az a Ridah"],
+      [6240, "Ice Cube feat. Dr. Dre & MC Ren — Hello"],
+      [6481, "MC Eiht — Streiht Up Menace"],
+      [6711, "Dr. Dre — Keep Their Heads Ringin'"],
+      [7026, "Mack 10 & Tha Dogg Pound — Nothin' But the Cavi Hit"],
+      [7227, "N.W.A — Appetite for Destruction"],
+      [7417, "2Pac feat. George Clinton — Can't C Me"],
+      [7759, "Mary J. Blige — Family Affair"],
+      [8038, "Tha Dogg Pound — What Would U Do?"],
+      [8248, "E-40 feat. The Click — Captain Save a Hoe"],
+      [8491, "Spice 1 feat. MC Eiht — The Murda Show"],
+      [8719, "South Central Cartel — Servin' 'Em Heat"],
+      [8978, "Westside Connection — Bow Down"],
+      [9191, "N.W.A — Gangsta Gangsta"],
+      [9422, "Truth Hurts feat. Rakim — Addictive"],
+      [9658, "CPO feat. MC Ren — Ballad of a Menace"],
+      [9930, "Kurupt — C-Walk"],
+      [10170, "Nas feat. Dr. Dre — Nas Is Coming"],
+      [10519, "King Tee — Played Like a Piano"],
+      [10753, "2Pac feat. Roger Troutman & Dr. Dre — California Love"],
+      [10994, "Jayo Felony — Sherm Stick"],
+      [11181, "Spice 1 — 187 Proof"],
+      [11402, "The D.O.C. feat. N.W.A — The Grand Finalé"],
+      [11687, "MC Breed & DFC — Ain't No Future in Yo Frontin'"],
+      [11930, "The Whoridas — Talkin' Bout Bank"],
+      [12157, "DJ Pooh feat. Kam — Whoop! Whoop!"],
+      [12447, "2Pac feat. K-Ci & JoJo — How Do U Want It"],
+      [12693, "MC Ren — Ruthless for Life"],
+      [12930, "Digital Underground feat. 2Pac — Same Song"],
+      [13123, "Warren G feat. Nate Dogg — Regulate"],
+      [13372, "Dr. Dre feat. Snoop Dogg, RBX & Jewell — Let Me Ride"],
+      [13649, "Bone Thugs-n-Harmony — Mr. Bill Collector"],
+      [13962, "Snoop Dogg feat. Goldie Loc — 20 Minutes"],
+      [14168, "Too $hort — Money in the Ghetto"],
+      [14517, "Nate Dogg — I Got Love"],
+      [14757, "Ice Cube feat. Don Jagwarr — Wicked"],
+      [14996, "Mack 10 feat. Ice Cube & WC — Westside Slaughterhouse"],
+      [15303, "Thug Life — Pour Out a Little Liquor"]
+    ]
   }
 ];
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
   ]
 });
+
+const vibeSync = new VibeSync(client);
 
 let connection;
 let player;
 let currentStationIndex = 0;
 let statusMessageId = null;
-let countdownInterval = null;
-
+let updateInterval = null;
 let currentStationStartedAt = null;
-let currentStationDurationMs = 0;
 let currentMode = "intro";
+let volume = 0.35;
+let paused = false;
 
-function formatTime(ms) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
+function formatTime(seconds) {
+  seconds = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
 
-  if (hours > 0) {
-    return `${hours} hour${hours === 1 ? "" : "s"} ${minutes} minute${minutes === 1 ? "" : "s"}`;
-  }
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
 
-  return `${Math.max(1, minutes)} minute${minutes === 1 ? "" : "s"}`;
+function isMod(member) {
+  return member.permissions.has(PermissionsBitField.Flags.ManageGuild) ||
+    member.permissions.has(PermissionsBitField.Flags.ManageChannels);
 }
 
 function getCurrentStation() {
   return stations[currentStationIndex];
 }
 
-function createStreamResource(url) {
-  return createAudioResource(url, {
-    inlineVolume: true
-  });
+function getElapsedSeconds() {
+  if (!currentStationStartedAt || currentMode !== "main") return 0;
+  return Math.floor((Date.now() - currentStationStartedAt) / 1000);
 }
 
-async function updateStatus(station) {
-  client.user.setActivity(`${BOT_STATION_NAME} • ${station.name}`, {
+function getCurrentSong(station) {
+  if (currentMode !== "main") return "Station intro";
+
+  const elapsed = getElapsedSeconds();
+  let current = station.songs[0]?.[1] || "Unknown song";
+
+  for (const [time, title] of station.songs) {
+    if (elapsed >= time) current = title;
+    else break;
+  }
+
+  return current;
+}
+
+function getNextSong(station) {
+  if (currentMode !== "main") return station.songs[0]?.[1] || "First track";
+
+  const elapsed = getElapsedSeconds();
+
+  for (const [time, title] of station.songs) {
+    if (time > elapsed) return title;
+  }
+
+  return "Next station";
+}
+
+async function createStreamResource(url) {
+  const response = await request(url, {
+    maxRedirections: 5
+  });
+
+  const stream = Readable.fromWeb(response.body);
+
+  const resource = createAudioResource(stream, {
+    inlineVolume: true
+  });
+
+  resource.volume.setVolume(volume);
+  return resource;
+}
+
+async function setVoiceStatus(text) {
+  try {
+    await vibeSync.setVoiceStatus(VOICE_CHANNEL_ID, text.slice(0, 500));
+  } catch (err) {
+    console.log("Could not update voice channel status:", err.message);
+  }
+}
+
+async function updatePresenceAndStatus() {
+  const station = getCurrentStation();
+  const currentSong = getCurrentSong(station);
+  const nextSong = getNextSong(station);
+
+  client.user.setActivity(`${station.shortName} • ${currentSong}`, {
     type: ActivityType.Listening
   });
+
+  await setVoiceStatus(`🎵 ${currentSong}`);
 
   if (!STATUS_CHANNEL_ID) return;
 
   const channel = await client.channels.fetch(STATUS_CHANNEL_ID).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
 
-  let timeLine = "";
-
-  if (currentMode === "main" && currentStationStartedAt && currentStationDurationMs > 0) {
-    const elapsed = Date.now() - currentStationStartedAt;
-    const remaining = currentStationDurationMs - elapsed;
-    timeLine = `Ends in **${formatTime(remaining)}**`;
-  } else {
-    timeLine = `Starting station intro...`;
-  }
+  const elapsed = getElapsedSeconds();
+  const remaining = currentMode === "main"
+    ? station.durationSeconds - elapsed
+    : 0;
 
   const nextStation = stations[(currentStationIndex + 1) % stations.length];
 
   const message =
-`📻 **${BOT_STATION_NAME} is now playing**
+`📻 **${BOT_STATION_NAME}**
 
-**${station.name}**
-${station.note ? `*${station.note}*\n` : ""}
-${timeLine}
+**Now Playing**
+${currentMode === "intro" ? "Station Intro" : currentSong}
 
-**Next Up:** ${nextStation.name}
+**Station**
+${station.name}
+${station.note ? `*${station.note}*` : ""}
 
-Looping through all GTASIXHUB stations 24/7.`;
+**Time**
+${currentMode === "main" ? `${formatTime(elapsed)} elapsed • ends in **${formatTime(remaining)}**` : "Starting station..."}
+
+**Next Song**
+${nextSong}
+
+**Next Station**
+${nextStation.name}`;
 
   if (statusMessageId) {
-    const oldMessage = await channel.messages.fetch(statusMessageId).catch(() => null);
-    if (oldMessage) {
-      await oldMessage.edit(message).catch(() => {});
+    const old = await channel.messages.fetch(statusMessageId).catch(() => null);
+    if (old) {
+      await old.edit(message).catch(() => {});
       return;
     }
   }
@@ -151,19 +462,17 @@ Looping through all GTASIXHUB stations 24/7.`;
   if (sent) statusMessageId = sent.id;
 }
 
-function startCountdown(station) {
-  if (countdownInterval) clearInterval(countdownInterval);
+function startUpdates() {
+  if (updateInterval) clearInterval(updateInterval);
 
-  countdownInterval = setInterval(() => {
-    updateStatus(station);
-  }, 60 * 1000);
+  updateInterval = setInterval(() => {
+    updatePresenceAndStatus();
+  }, 30 * 1000);
 }
 
-function stopCountdown() {
-  if (countdownInterval) {
-    clearInterval(countdownInterval);
-    countdownInterval = null;
-  }
+function stopUpdates() {
+  if (updateInterval) clearInterval(updateInterval);
+  updateInterval = null;
 }
 
 async function playIntro() {
@@ -171,17 +480,14 @@ async function playIntro() {
 
   currentMode = "intro";
   currentStationStartedAt = null;
-  currentStationDurationMs = 0;
-
-  stopCountdown();
-  await updateStatus(station);
 
   console.log(`Playing intro: ${station.name}`);
+  await updatePresenceAndStatus();
 
-  const resource = createStreamResource(station.intro);
-  resource.volume.setVolume(0.35);
-
+  const resource = await createStreamResource(station.intro);
   player.play(resource);
+
+  startUpdates();
 }
 
 async function playMain() {
@@ -190,37 +496,13 @@ async function playMain() {
   currentMode = "main";
   currentStationStartedAt = Date.now();
 
-  /*
-    IMPORTANT:
-    Because the files are streamed from Google Drive, the bot cannot always read
-    the real MP3 duration perfectly.
-
-    Set manual durations here in minutes when you know them.
-    Example:
-    "Flash FM / GTA Vice City": 74,
-
-    If left as 0, the countdown will still work visually only if you add the durations.
-  */
-
-  const manualDurationsSeconds = {
-  "Flash FM / GTA Vice City": 4598,
-  "Non-Stop Pop FM / GTA V": 13878,
-  "Fever 105 / GTA Vice City": 3793,
-  "Radio Los Santos / GTA V": 14428,
-  "West Coast Classics / GTA V": 15512
-};
-
-currentStationDurationMs = (manualDurationsSeconds[station.name] || 0) * 1000;
-
-  await updateStatus(station);
-  startCountdown(station);
-
   console.log(`Playing main: ${station.name}`);
+  await updatePresenceAndStatus();
 
-  const resource = createStreamResource(station.main);
-  resource.volume.setVolume(0.35);
-
+  const resource = await createStreamResource(station.main);
   player.play(resource);
+
+  startUpdates();
 }
 
 async function playNextStation() {
@@ -228,12 +510,24 @@ async function playNextStation() {
   await playIntro();
 }
 
+async function playPreviousStation() {
+  currentStationIndex = (currentStationIndex - 1 + stations.length) % stations.length;
+  await playIntro();
+}
+
+async function jumpToStation(index) {
+  if (index < 0 || index >= stations.length) return false;
+  currentStationIndex = index;
+  await playIntro();
+  return true;
+}
+
 async function connectToRadio() {
   const guild = await client.guilds.fetch(GUILD_ID);
   const channel = await guild.channels.fetch(VOICE_CHANNEL_ID);
 
   if (!channel || !channel.isVoiceBased()) {
-    console.log("Voice channel not found or invalid.");
+    console.log("Voice channel not found.");
     return;
   }
 
@@ -253,6 +547,8 @@ async function connectToRadio() {
   connection.subscribe(player);
 
   player.on(AudioPlayerStatus.Idle, async () => {
+    if (paused) return;
+
     if (currentMode === "intro") {
       await playMain();
     } else {
@@ -261,18 +557,12 @@ async function connectToRadio() {
   });
 
   player.on("error", async error => {
-    console.error("Audio player error:", error);
-
-    if (currentMode === "intro") {
-      setTimeout(playMain, 2000);
-    } else {
-      setTimeout(playNextStation, 2000);
-    }
+    console.error("Audio error:", error);
+    if (currentMode === "intro") await playMain();
+    else await playNextStation();
   });
 
   connection.on(VoiceConnectionStatus.Disconnected, async () => {
-    console.log("Disconnected. Trying to reconnect...");
-
     try {
       await Promise.race([
         entersState(connection, VoiceConnectionStatus.Signalling, 5000),
@@ -289,13 +579,115 @@ async function connectToRadio() {
 
   await entersState(connection, VoiceConnectionStatus.Ready, 30000);
 
-  console.log(`Connected to ${channel.name}. Starting ${BOT_STATION_NAME}...`);
+  console.log(`Connected. Starting ${BOT_STATION_NAME}.`);
   await playIntro();
 }
 
 client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
   await connectToRadio();
+});
+
+client.on("messageCreate", async message => {
+  if (message.author.bot || !message.guild) return;
+  if (!message.content.startsWith("!radio")) return;
+
+  const args = message.content.trim().split(/\s+/);
+  const command = args[1]?.toLowerCase();
+
+  if (!command || command === "help") {
+    return message.reply(
+`**6 Hub 92.0 Mod Commands**
+
+\`!radio now\` - Show current station/song
+\`!radio list\` - Show station list
+\`!radio skip\` - Skip to next station
+\`!radio prev\` - Go to previous station
+\`!radio station 1-5\` - Jump to a station
+\`!radio restart\` - Restart current station
+\`!radio pause\` - Pause audio
+\`!radio resume\` - Resume audio
+\`!radio volume 1-100\` - Set volume
+\`!radio refresh\` - Refresh status message and VC status`
+    );
+  }
+
+  if (command === "now") {
+    const station = getCurrentStation();
+    return message.reply(`📻 **${BOT_STATION_NAME}**\n**Station:** ${station.name}\n**Song:** ${getCurrentSong(station)}`);
+  }
+
+  if (!isMod(message.member)) {
+    return message.reply("You need Manage Server or Manage Channels to control 6 Hub 92.0.");
+  }
+
+  if (command === "list") {
+    return message.reply(stations.map((s, i) => `**${i + 1}.** ${s.name}`).join("\n"));
+  }
+
+  if (command === "skip" || command === "next") {
+    await playNextStation();
+    return message.reply("Skipped to the next station.");
+  }
+
+  if (command === "prev" || command === "previous") {
+    await playPreviousStation();
+    return message.reply("Went back to the previous station.");
+  }
+
+  if (command === "station") {
+    const stationNumber = Number(args[2]);
+    if (!stationNumber || stationNumber < 1 || stationNumber > stations.length) {
+      return message.reply("Use `!radio station 1-5`.");
+    }
+
+    await jumpToStation(stationNumber - 1);
+    return message.reply(`Switched to **${getCurrentStation().name}**.`);
+  }
+
+  if (command === "restart") {
+    await playIntro();
+    return message.reply("Restarted the current station.");
+  }
+
+  if (command === "pause") {
+    paused = true;
+    player.pause();
+    stopUpdates();
+    await setVoiceStatus("⏸️ Broadcast paused");
+    return message.reply("Paused 6 Hub 92.0.");
+  }
+
+  if (command === "resume") {
+    paused = false;
+    player.unpause();
+    startUpdates();
+    await updatePresenceAndStatus();
+    return message.reply("Resumed 6 Hub 92.0.");
+  }
+
+  if (command === "volume") {
+    const newVolume = Number(args[2]);
+
+    if (!newVolume || newVolume < 1 || newVolume > 100) {
+      return message.reply("Use `!radio volume 1-100`.");
+    }
+
+    volume = newVolume / 100;
+
+    try {
+      player.state.resource.volume.setVolume(volume);
+    } catch {}
+
+    return message.reply(`Volume set to **${newVolume}%**.`);
+  }
+
+  if (command === "refresh") {
+    await updatePresenceAndStatus();
+    return message.reply("Refreshed status.");
+  }
+
+  return message.reply("Unknown command. Use `!radio help`.");
 });
 
 client.login(TOKEN);
