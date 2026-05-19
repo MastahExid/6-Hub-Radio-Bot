@@ -202,15 +202,15 @@ async function playMain() {
     If left as 0, the countdown will still work visually only if you add the durations.
   */
 
-  const manualDurationsMinutes = {
-    "Flash FM / GTA Vice City": 0,
-    "Non-Stop Pop FM / GTA V": 0,
-    "Fever 105 / GTA Vice City": 0,
-    "Radio Los Santos / GTA V": 0,
-    "West Coast Classics / GTA V": 0
-  };
+  const manualDurationsSeconds = {
+  "Flash FM / GTA Vice City": 4598,
+  "Non-Stop Pop FM / GTA V": 13878,
+  "Fever 105 / GTA Vice City": 3793,
+  "Radio Los Santos / GTA V": 14428,
+  "West Coast Classics / GTA V": 15512
+};
 
-  currentStationDurationMs = (manualDurationsMinutes[station.name] || 0) * 60 * 1000;
+currentStationDurationMs = (manualDurationsSeconds[station.name] || 0) * 1000;
 
   await updateStatus(station);
   startCountdown(station);
