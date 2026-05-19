@@ -11,6 +11,8 @@
     "discord.js": "latest",
     "dotenv": "latest",
     "express": "latest",
-    "ffmpeg-static": "latest"
+    "ffmpeg-static": "latest",
+    "vibesync": "latest",
+    "undici": "latest"
   }
 }
