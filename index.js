@@ -386,9 +386,7 @@ function getNextSong(station) {
 }
 
 async function createStreamResource(url) {
-  const response = await request(url, {
-    maxRedirections: 5
-  });
+  const response = await request(url);
 
   const stream = Readable.fromWeb(response.body);
 
