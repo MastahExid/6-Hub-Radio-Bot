@@ -1,0 +1,16 @@
+{
+  "name": "6hub-radio-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@discordjs/voice": "latest",
+    "discord.js": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "ffmpeg-static": "latest"
+  }
+}
