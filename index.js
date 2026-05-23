@@ -426,19 +426,31 @@ function createFfmpegResource(args, label = "audio") {
 async function createStreamResource(url) {
   console.log(`Loading audio URL: ${url}`);
 
-  const resource = createFfmpegResource([
+  const isRemote = url.startsWith("http://") || url.startsWith("https://");
+
+  const args = [
     "-hide_banner",
-    "-loglevel", "warning",
-    "-reconnect", "1",
-    "-reconnect_streamed", "1",
-    "-reconnect_delay_max", "5",
-    "-user_agent", "Mozilla/5.0",
+    "-loglevel", "warning"
+  ];
+
+  if (isRemote) {
+    args.push(
+      "-reconnect", "1",
+      "-reconnect_streamed", "1",
+      "-reconnect_delay_max", "5",
+      "-user_agent", "Mozilla/5.0"
+    );
+  }
+
+  args.push(
     "-i", url,
     "-f", "s16le",
     "-ar", "48000",
     "-ac", "2",
     "pipe:1"
-  ], "stream");
+  );
+
+  const resource = createFfmpegResource(args, "stream");
 
   console.log("Audio resource created.");
   return resource;
