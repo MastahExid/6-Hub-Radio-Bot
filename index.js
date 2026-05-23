@@ -83,8 +83,8 @@ const stations = [
     shortName: "Non-Stop Pop FM",
     note: "6 Hub Cut - Includes Deleted Songs",
     durationSeconds: 13878,
-    intro: "https://github.com/MastahExid/SydeRepo/releases/download/nonstoppopintro/Non-Stop-Pop-Intro.mp3",
-    main: "https://github.com/MastahExid/SydeRepo/releases/download/nonstoppopmain/Non-Stop-Pop-Main.mp3",
+    intro: "./audio/non-stop-pop/intro.mp3",
+    main: "./audio/non-stop-pop/main.mp3",
     songs: [
       [6, "Fergie feat. Ludacris — Glamorous"],
       [245, "Real Life — Send Me An Angel '89"],
@@ -153,8 +153,8 @@ const stations = [
     shortName: "Fever 105",
     note: null,
     durationSeconds: 3793,
-    intro: "https://github.com/MastahExid/SydeRepo/releases/download/fever105intro/Fever-105-Intro.mp3",
-    main: "https://github.com/MastahExid/SydeRepo/releases/download/fever105main/Fever-105-Main.mp3",
+    intro: "./audio/fever-105/intro.mp3",
+    main: "./audio/fever-105/main.mp3",
     songs: [
       [4, "The Whispers — And the Beat Goes On"],
       [271, "Fat Larry's Band — Act Like You Know"],
@@ -176,8 +176,8 @@ const stations = [
     shortName: "Radio Los Santos",
     note: "6 Hub Cut - Includes Deleted Songs",
     durationSeconds: 14428,
-    intro: "https://github.com/MastahExid/SydeRepo/releases/download/radiolsintro/Radio-Los-Santos-Intro.mp3",
-    main: "https://github.com/MastahExid/SydeRepo/releases/download/radiolsmain/Radio-Los-Santos-Main.mp3",
+    intro: "./audio/radio-los-santos/intro.mp3",
+    main: "./audio/radio-los-santos/main.mp3",
     songs: [
       [10, "G-Side feat. G-Mane — Relaxin'"],
       [202, "Kendrick Lamar — A.D.H.D"],
@@ -253,8 +253,8 @@ const stations = [
     shortName: "West Coast Classics",
     note: "6 Hub Cut - Includes Deleted Songs",
     durationSeconds: 15512,
-    intro: "https://github.com/MastahExid/SydeRepo/releases/download/westcoastclassicsintro/West-Coast-Classics-Intro.mp3",
-    main: "https://github.com/MastahExid/SydeRepo/releases/download/westcoastclassicsmain/West-Coast-Classics-Main.mp3",
+    intro: "./audio/west-coast-classics/intro.mp3",
+    main: "./audio/west-coast-classics/main.mp3",
     songs: [
       [6, "The Conscious Daughters — We Roll Deep"],
       [235, "Obie Trice feat. Dr. Dre & Eminem — Shit Hits the Fan"],
