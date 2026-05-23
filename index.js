@@ -1,3 +1,6 @@
+Paste this whole thing into `index.js`. I made it use **FFmpeg direct URL streaming**, added **`!radio testtone`**, added **transition lock**, and removed the old `Readable/prism` method.
+
+```js
 require("dotenv").config();
 
 const express = require("express");
@@ -396,41 +399,22 @@ function getNextSong(station) {
   return "Next station";
 }
 
-async function createStreamResource(url) {
-  console.log(`Loading audio URL: ${url}`);
-
-  const ffmpeg = spawn(ffmpegPath, [
-    "-hide_banner",
-    "-loglevel", "warning",
-
-    "-reconnect", "1",
-    "-reconnect_streamed", "1",
-    "-reconnect_delay_max", "5",
-
-    "-user_agent", "Mozilla/5.0",
-    "-i", url,
-
-    "-f", "s16le",
-    "-ar", "48000",
-    "-ac", "2",
-    "pipe:1"
-  ], {
+function createFfmpegResource(args, label = "audio") {
+  const ffmpeg = spawn(ffmpegPath, args, {
     stdio: ["ignore", "pipe", "pipe"]
   });
 
   ffmpeg.stderr.on("data", data => {
     const text = data.toString().trim();
-    if (text) console.error("FFmpeg:", text);
+    if (text) console.error(`FFmpeg ${label}:`, text);
   });
 
   ffmpeg.on("error", error => {
-    console.error("FFmpeg process error:", error);
+    console.error(`FFmpeg ${label} process error:`, error);
   });
 
   ffmpeg.on("close", code => {
-    if (code !== 0 && code !== null) {
-      console.log(`FFmpeg exited with code ${code}`);
-    }
+    console.log(`FFmpeg ${label} exited with code ${code}`);
   });
 
   const resource = createAudioResource(ffmpeg.stdout, {
@@ -439,8 +423,47 @@ async function createStreamResource(url) {
   });
 
   resource.volume.setVolume(volume);
+  return resource;
+}
+
+async function createStreamResource(url) {
+  console.log(`Loading audio URL: ${url}`);
+
+  const resource = createFfmpegResource([
+    "-hide_banner",
+    "-loglevel", "warning",
+    "-reconnect", "1",
+    "-reconnect_streamed", "1",
+    "-reconnect_delay_max", "5",
+    "-user_agent", "Mozilla/5.0",
+    "-i", url,
+    "-f", "s16le",
+    "-ar", "48000",
+    "-ac", "2",
+    "pipe:1"
+  ], "stream");
 
   console.log("Audio resource created.");
+  return resource;
+}
+
+async function createTestToneResource() {
+  console.log("Creating 10 second test tone.");
+
+  const resource = createFfmpegResource([
+    "-hide_banner",
+    "-loglevel", "warning",
+    "-f", "lavfi",
+    "-i", "sine=frequency=440:duration=10",
+    "-f", "s16le",
+    "-ar", "48000",
+    "-ac", "2",
+    "pipe:1"
+  ], "test tone");
+
+  resource.volume.setVolume(1);
+
+  console.log("Test tone resource created.");
   return resource;
 }
 
@@ -480,10 +503,7 @@ async function getOrCreateStatusMessage(channel, content) {
 
   const sent = await channel.send(content).catch(() => null);
 
-  if (sent) {
-    statusMessageId = sent.id;
-  }
-
+  if (sent) statusMessageId = sent.id;
   return sent;
 }
 
@@ -556,10 +576,7 @@ _24/7 radio broadcast_`;
 
 function startUpdates() {
   if (updateInterval) clearInterval(updateInterval);
-
-  updateInterval = setInterval(() => {
-    updatePresenceAndStatus();
-  }, 60 * 1000);
+  updateInterval = setInterval(updatePresenceAndStatus, 60 * 1000);
 }
 
 function stopUpdates() {
@@ -611,6 +628,18 @@ async function playMain() {
 
   await updatePresenceAndStatus();
   startUpdates();
+}
+
+async function playTestTone() {
+  currentMode = "intro";
+  currentStationStartedAt = null;
+
+  console.log("Playing test tone.");
+
+  const resource = await createTestToneResource();
+  player.play(resource);
+
+  await setVoiceStatus("🔊 Test tone playing");
 }
 
 async function playNextStation() {
@@ -727,7 +756,8 @@ client.on("messageCreate", async message => {
 \`!radio pause\` - Pause audio
 \`!radio resume\` - Resume audio
 \`!radio volume 1-100\` - Set volume
-\`!radio refresh\` - Refresh status message and VC status`
+\`!radio refresh\` - Refresh status message and VC status
+\`!radio testtone\` - Play a 10 second test beep`
     );
   }
 
@@ -756,6 +786,7 @@ client.on("messageCreate", async message => {
 
   if (command === "station") {
     const stationNumber = Number(args[2]);
+
     if (!stationNumber || stationNumber < 1 || stationNumber > stations.length) {
       return message.reply("Use `!radio station 1-5`.");
     }
@@ -806,7 +837,13 @@ client.on("messageCreate", async message => {
     return message.reply("Refreshed status.");
   }
 
+  if (command === "testtone") {
+    await playTestTone();
+    return message.reply("Playing a 10 second test tone. If you cannot hear this, the issue is Discord voice output/encryption, not the MP3 links.");
+  }
+
   return message.reply("Unknown command. Use `!radio help`.");
 });
 
 client.login(TOKEN);
+```
