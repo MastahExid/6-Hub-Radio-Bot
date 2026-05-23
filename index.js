@@ -55,7 +55,7 @@ const stations = [
     note: null,
     durationSeconds: 4598,
     intro: "https://github.com/MastahExid/SydeRepo/releases/download/flasfhminttro/Flash-FM-Intro.mp3",
-    main: "https://drive.google.com/uc?export=download&id=1RyFyb9hogR9dupm6QUBDKXpbeKp90zAu",
+    main: "https://github.com/MastahExid/SydeRepo/releases/download/flasfhmmain/Flash-FM-Main.mp3",
     songs: [
       [8, "Hall and Oates — Out of Touch"],
       [255, "Wang Chung — Dance Hall Days"],
