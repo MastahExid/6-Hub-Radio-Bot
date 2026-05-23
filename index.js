@@ -154,8 +154,8 @@ const stations = [
     shortName: "Fever 105",
     note: null,
     durationSeconds: 3793,
-    intro: "https://drive.google.com/uc?export=download&id=1afqoEPlj8-uFom4ArsZOTCLeqj3bCpuf",
-    main: "https://drive.google.com/uc?export=download&id=1GFaqToOqDu2jns0FiJGwimeMGLWUuVr1",
+    intro: "https://github.com/MastahExid/SydeRepo/releases/download/fever105intro/Fever-105-Intro.mp3",
+    main: "https://github.com/MastahExid/SydeRepo/releases/download/fever105main/Fever-105-Main.mp3",
     songs: [
       [4, "The Whispers — And the Beat Goes On"],
       [271, "Fat Larry's Band — Act Like You Know"],
@@ -177,8 +177,8 @@ const stations = [
     shortName: "Radio Los Santos",
     note: "6 Hub Cut - Includes Deleted Songs",
     durationSeconds: 14428,
-    intro: "https://drive.google.com/uc?export=download&id=1TOqqt5WlasITsE4FrrKtlf7CUa-_MWof",
-    main: "https://drive.google.com/uc?export=download&id=1oyt8ajgg35a3c2T_IX02SfocRo4CBvDT",
+    intro: "https://github.com/MastahExid/SydeRepo/releases/download/radiolsintro/Radio-Los-Santos-Intro.mp3",
+    main: "https://github.com/MastahExid/SydeRepo/releases/download/radiolsmain/Radio-Los-Santos-Main.mp3",
     songs: [
       [10, "G-Side feat. G-Mane — Relaxin'"],
       [202, "Kendrick Lamar — A.D.H.D"],
@@ -254,8 +254,8 @@ const stations = [
     shortName: "West Coast Classics",
     note: "6 Hub Cut - Includes Deleted Songs",
     durationSeconds: 15512,
-    intro: "https://drive.google.com/uc?export=download&id=1B9RTY_8rTIgeD_4QaC4_JB065FQRJFWj",
-    main: "https://drive.google.com/uc?export=download&id=1xRFSna24Q44rGTzT91NMrXDXSAnmJc2r",
+    intro: "https://github.com/MastahExid/SydeRepo/releases/download/westcoastclassicsintro/West-Coast-Classics-Intro.mp3",
+    main: "https://github.com/MastahExid/SydeRepo/releases/download/westcoastclassicsmain/West-Coast-Classics-Main.mp3",
     songs: [
       [6, "The Conscious Daughters — We Roll Deep"],
       [235, "Obie Trice feat. Dr. Dre & Eminem — Shit Hits the Fan"],
