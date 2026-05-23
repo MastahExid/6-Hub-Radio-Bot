@@ -83,8 +83,8 @@ const stations = [
     shortName: "Non-Stop Pop FM",
     note: "6 Hub Cut - Includes Deleted Songs",
     durationSeconds: 13878,
-    intro: "https://drive.google.com/uc?export=download&id=1deMQNOwapCDPf1JIfPESZPE_U4KWZ4B6",
-    main: "https://drive.google.com/uc?export=download&id=1JcNsPlQQG_ZHUjsqvJ0erlZzsYlt57KP",
+    intro: "https://github.com/MastahExid/SydeRepo/releases/download/nonstoppopintro/Non-Stop-Pop-Intro.mp3",
+    main: "https://github.com/MastahExid/SydeRepo/releases/download/nonstoppopmain/Non-Stop-Pop-Main.mp3",
     songs: [
       [6, "Fergie feat. Ludacris — Glamorous"],
       [245, "Real Life — Send Me An Angel '89"],
