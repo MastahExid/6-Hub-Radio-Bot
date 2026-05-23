@@ -2,8 +2,9 @@ require("dotenv").config();
 
 const express = require("express");
 const { Readable } = require("stream");
-const { request } = require("undici");
 const { VibeSync } = require("vibesync");
+const prism = require("prism-media");
+const ffmpegPath = require("ffmpeg-static");
 
 const {
   Client,
@@ -23,6 +24,14 @@ const {
 } = require("@discordjs/voice");
 
 const app = express();
+
+process.on("unhandledRejection", error => {
+  console.error("Unhandled promise rejection:", error);
+});
+
+process.on("uncaughtException", error => {
+  console.error("Uncaught exception:", error);
+});
 
 app.get("/", (req, res) => {
   res.send("6 Hub 92.0 is online.");
@@ -333,6 +342,7 @@ let currentStationStartedAt = null;
 let currentMode = "intro";
 let volume = 0.35;
 let paused = false;
+let statusUpdating = false;
 
 function formatTime(seconds) {
   seconds = Math.max(0, Math.floor(seconds));
@@ -386,11 +396,37 @@ function getNextSong(station) {
 }
 
 async function createStreamResource(url) {
-  const response = await request(url);
+  const response = await fetch(url, {
+    redirect: "follow",
+    headers: {
+      "User-Agent": "6-Hub-92.0-Radio-Bot"
+    }
+  });
 
-  const stream = Readable.fromWeb(response.body);
+  if (!response.ok || !response.body) {
+    throw new Error(`Audio request failed: ${response.status} ${response.statusText}`);
+  }
 
-  const resource = createAudioResource(stream, {
+  const inputStream = Readable.fromWeb(response.body);
+
+  const ffmpeg = new prism.FFmpeg({
+    shell: false,
+    ffmpegPath,
+    args: [
+      "-hide_banner",
+      "-loglevel", "error",
+      "-i", "pipe:0",
+      "-analyzeduration", "0",
+      "-f", "s16le",
+      "-ar", "48000",
+      "-ac", "2",
+      "pipe:1"
+    ]
+  });
+
+  const pcmStream = inputStream.pipe(ffmpeg);
+
+  const resource = createAudioResource(pcmStream, {
     inlineVolume: true
   });
 
@@ -401,63 +437,111 @@ async function createStreamResource(url) {
 async function setVoiceStatus(text) {
   try {
     await vibeSync.setVoiceStatus(VOICE_CHANNEL_ID, text.slice(0, 500));
+    console.log("Voice channel status updated successfully");
   } catch (err) {
     console.log("Could not update voice channel status:", err.message);
   }
 }
 
-async function updatePresenceAndStatus() {
-  const station = getCurrentStation();
-  const currentSong = getCurrentSong(station);
-  const nextSong = getNextSong(station);
-
-  client.user.setActivity(`${station.shortName} • ${currentSong}`, {
-    type: ActivityType.Listening
-  });
-
-  await setVoiceStatus(`🎵 ${currentSong}`);
-
-  if (!STATUS_CHANNEL_ID) return;
-
-  const channel = await client.channels.fetch(STATUS_CHANNEL_ID).catch(() => null);
-  if (!channel || !channel.isTextBased()) return;
-
-  const elapsed = getElapsedSeconds();
-  const remaining = currentMode === "main"
-    ? station.durationSeconds - elapsed
-    : 0;
-
-  const nextStation = stations[(currentStationIndex + 1) % stations.length];
-
-  const message =
-`📻 **${BOT_STATION_NAME}**
-
-**Now Playing**
-${currentMode === "intro" ? "Station Intro" : currentSong}
-
-**Station**
-${station.name}
-${station.note ? `*${station.note}*` : ""}
-
-**Time**
-${currentMode === "main" ? `${formatTime(elapsed)} elapsed • ends in **${formatTime(remaining)}**` : "Starting station..."}
-
-**Next Song**
-${nextSong}
-
-**Next Station**
-${nextStation.name}`;
-
+async function getOrCreateStatusMessage(channel, content) {
   if (statusMessageId) {
-    const old = await channel.messages.fetch(statusMessageId).catch(() => null);
-    if (old) {
-      await old.edit(message).catch(() => {});
-      return;
+    const existing = await channel.messages.fetch(statusMessageId).catch(() => null);
+
+    if (existing) {
+      await existing.edit(content).catch(() => {});
+      return existing;
     }
   }
 
-  const sent = await channel.send(message).catch(() => null);
-  if (sent) statusMessageId = sent.id;
+  const recentMessages = await channel.messages.fetch({ limit: 25 }).catch(() => null);
+
+  if (recentMessages) {
+    const existingBotMessage = recentMessages.find(msg =>
+      msg.author.id === client.user.id &&
+      msg.content.includes("📻 **6 Hub 92.0**")
+    );
+
+    if (existingBotMessage) {
+      statusMessageId = existingBotMessage.id;
+      await existingBotMessage.edit(content).catch(() => {});
+      return existingBotMessage;
+    }
+  }
+
+  const sent = await channel.send(content).catch(() => null);
+
+  if (sent) {
+    statusMessageId = sent.id;
+  }
+
+  return sent;
+}
+
+async function updatePresenceAndStatus() {
+  if (statusUpdating) return;
+  statusUpdating = true;
+
+  try {
+    const station = getCurrentStation();
+    const currentSong = getCurrentSong(station);
+    const nextSong = getNextSong(station);
+    const nextStation = stations[(currentStationIndex + 1) % stations.length];
+
+    client.user.setActivity(`${station.shortName} • ${currentSong}`, {
+      type: ActivityType.Listening
+    });
+
+    await setVoiceStatus(
+      currentMode === "intro"
+        ? `📻 ${station.shortName} intro`
+        : `🎵 ${currentSong}`
+    );
+
+    if (!STATUS_CHANNEL_ID) return;
+
+    const channel = await client.channels.fetch(STATUS_CHANNEL_ID).catch(() => null);
+    if (!channel || !channel.isTextBased()) return;
+
+    const elapsed = getElapsedSeconds();
+    const remaining = currentMode === "main"
+      ? station.durationSeconds - elapsed
+      : 0;
+
+    const stationLine = station.note
+      ? `${station.name}\n_${station.note}_`
+      : station.name;
+
+    const timeLine = currentMode === "main"
+      ? `\`${formatTime(elapsed)} elapsed\` • ends in **${formatTime(remaining)}**`
+      : "`Station intro playing...`";
+
+    const content =
+`📻 **6 Hub 92.0**
+
+━━━━━━━━━━━━━━━━━━━━
+
+🎶 **Now Playing**
+${currentMode === "intro" ? "**Station Intro**" : `**${currentSong}**`}
+
+📡 **Station**
+${stationLine}
+
+⏱️ **Time**
+${timeLine}
+
+⏭️ **Next Song**
+${nextSong}
+
+🔁 **Next Station**
+${nextStation.name}
+
+━━━━━━━━━━━━━━━━━━━━
+_24/7 radio broadcast_`;
+
+    await getOrCreateStatusMessage(channel, content);
+  } finally {
+    statusUpdating = false;
+  }
 }
 
 function startUpdates() {
@@ -465,7 +549,7 @@ function startUpdates() {
 
   updateInterval = setInterval(() => {
     updatePresenceAndStatus();
-  }, 30 * 1000);
+  }, 60 * 1000);
 }
 
 function stopUpdates() {
@@ -480,11 +564,11 @@ async function playIntro() {
   currentStationStartedAt = null;
 
   console.log(`Playing intro: ${station.name}`);
-  await updatePresenceAndStatus();
 
   const resource = await createStreamResource(station.intro);
   player.play(resource);
 
+  await updatePresenceAndStatus();
   startUpdates();
 }
 
@@ -495,11 +579,11 @@ async function playMain() {
   currentStationStartedAt = Date.now();
 
   console.log(`Playing main: ${station.name}`);
-  await updatePresenceAndStatus();
 
   const resource = await createStreamResource(station.main);
   player.play(resource);
 
+  await updatePresenceAndStatus();
   startUpdates();
 }
 
@@ -539,7 +623,8 @@ async function connectToRadio() {
     channelId: VOICE_CHANNEL_ID,
     guildId: GUILD_ID,
     adapterCreator: guild.voiceAdapterCreator,
-    selfDeaf: true
+    selfDeaf: false,
+    selfMute: false
   });
 
   connection.subscribe(player);
@@ -556,8 +641,12 @@ async function connectToRadio() {
 
   player.on("error", async error => {
     console.error("Audio error:", error);
-    if (currentMode === "intro") await playMain();
-    else await playNextStation();
+
+    if (currentMode === "intro") {
+      await playMain();
+    } else {
+      await playNextStation();
+    }
   });
 
   connection.on(VoiceConnectionStatus.Disconnected, async () => {
@@ -581,7 +670,7 @@ async function connectToRadio() {
   await playIntro();
 }
 
-client.once("ready", async () => {
+client.once("clientReady", async () => {
   console.log(`Logged in as ${client.user.tag}`);
   await connectToRadio();
 });
