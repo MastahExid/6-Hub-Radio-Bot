@@ -20,7 +20,8 @@ const {
   AudioPlayerStatus,
   VoiceConnectionStatus,
   entersState,
-  NoSubscriberBehavior
+  NoSubscriberBehavior,
+  StreamType
 } = require("@discordjs/voice");
 
 const app = express();
@@ -396,15 +397,27 @@ function getNextSong(station) {
 }
 
 async function createStreamResource(url) {
+  console.log(`Loading audio URL: ${url}`);
+
   const response = await fetch(url, {
     redirect: "follow",
     headers: {
-      "User-Agent": "6-Hub-92.0-Radio-Bot"
+      "User-Agent": "Mozilla/5.0"
     }
   });
 
+  console.log(`Audio response: ${response.status} ${response.statusText}`);
+  console.log(`Audio content-type: ${response.headers.get("content-type")}`);
+  console.log(`Final audio URL: ${response.url}`);
+
   if (!response.ok || !response.body) {
     throw new Error(`Audio request failed: ${response.status} ${response.statusText}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("text/html")) {
+    throw new Error("Audio URL returned HTML, not an MP3. The file host is blocking direct playback.");
   }
 
   const inputStream = Readable.fromWeb(response.body);
@@ -415,8 +428,9 @@ async function createStreamResource(url) {
     args: [
       "-hide_banner",
       "-loglevel", "error",
-      "-i", "pipe:0",
       "-analyzeduration", "0",
+      "-probesize", "32",
+      "-i", "pipe:0",
       "-f", "s16le",
       "-ar", "48000",
       "-ac", "2",
@@ -424,13 +438,24 @@ async function createStreamResource(url) {
     ]
   });
 
+  ffmpeg.on("error", error => {
+    console.error("FFmpeg error:", error);
+  });
+
+  ffmpeg.stderr?.on("data", data => {
+    console.error("FFmpeg stderr:", data.toString());
+  });
+
   const pcmStream = inputStream.pipe(ffmpeg);
 
   const resource = createAudioResource(pcmStream, {
+    inputType: StreamType.Raw,
     inlineVolume: true
   });
 
   resource.volume.setVolume(volume);
+
+  console.log("Audio resource created.");
   return resource;
 }
 
