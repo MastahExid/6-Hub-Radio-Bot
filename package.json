@@ -15,6 +15,7 @@
     "undici": "latest",
     "prism-media": "latest",
     "ffmpeg-static": "latest",
-    "opusscript": "latest"
+    "opusscript": "latest",
+    "libsodium-wrappers": "latest"
   }
 }
