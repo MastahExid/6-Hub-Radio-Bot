@@ -1,9 +1,8 @@
 require("dotenv").config();
 
 const express = require("express");
-const { Readable } = require("stream");
+const { spawn } = require("child_process");
 const { VibeSync } = require("vibesync");
-const prism = require("prism-media");
 const ffmpegPath = require("ffmpeg-static");
 
 const {
@@ -344,6 +343,7 @@ let currentMode = "intro";
 let volume = 0.35;
 let paused = false;
 let statusUpdating = false;
+let transitionLock = false;
 
 function formatTime(seconds) {
   seconds = Math.max(0, Math.floor(seconds));
@@ -399,56 +399,41 @@ function getNextSong(station) {
 async function createStreamResource(url) {
   console.log(`Loading audio URL: ${url}`);
 
-  const response = await fetch(url, {
-    redirect: "follow",
-    headers: {
-      "User-Agent": "Mozilla/5.0"
-    }
+  const ffmpeg = spawn(ffmpegPath, [
+    "-hide_banner",
+    "-loglevel", "warning",
+
+    "-reconnect", "1",
+    "-reconnect_streamed", "1",
+    "-reconnect_delay_max", "5",
+
+    "-user_agent", "Mozilla/5.0",
+    "-i", url,
+
+    "-f", "s16le",
+    "-ar", "48000",
+    "-ac", "2",
+    "pipe:1"
+  ], {
+    stdio: ["ignore", "pipe", "pipe"]
   });
 
-  console.log(`Audio response: ${response.status} ${response.statusText}`);
-  console.log(`Audio content-type: ${response.headers.get("content-type")}`);
-  console.log(`Final audio URL: ${response.url}`);
-
-  if (!response.ok || !response.body) {
-    throw new Error(`Audio request failed: ${response.status} ${response.statusText}`);
-  }
-
-  const contentType = response.headers.get("content-type") || "";
-
-  if (contentType.includes("text/html")) {
-    throw new Error("Audio URL returned HTML, not an MP3. The file host is blocking direct playback.");
-  }
-
-  const inputStream = Readable.fromWeb(response.body);
-
-  const ffmpeg = new prism.FFmpeg({
-    shell: false,
-    ffmpegPath,
-    args: [
-      "-hide_banner",
-      "-loglevel", "error",
-      "-analyzeduration", "0",
-      "-probesize", "32",
-      "-i", "pipe:0",
-      "-f", "s16le",
-      "-ar", "48000",
-      "-ac", "2",
-      "pipe:1"
-    ]
+  ffmpeg.stderr.on("data", data => {
+    const text = data.toString().trim();
+    if (text) console.error("FFmpeg:", text);
   });
 
   ffmpeg.on("error", error => {
-    console.error("FFmpeg error:", error);
+    console.error("FFmpeg process error:", error);
   });
 
-  ffmpeg.stderr?.on("data", data => {
-    console.error("FFmpeg stderr:", data.toString());
+  ffmpeg.on("close", code => {
+    if (code !== 0 && code !== null) {
+      console.log(`FFmpeg exited with code ${code}`);
+    }
   });
 
-  const pcmStream = inputStream.pipe(ffmpeg);
-
-  const resource = createAudioResource(pcmStream, {
+  const resource = createAudioResource(ffmpeg.stdout, {
     inputType: StreamType.Raw,
     inlineVolume: true
   });
@@ -582,6 +567,22 @@ function stopUpdates() {
   updateInterval = null;
 }
 
+async function safeTransition(callback) {
+  if (transitionLock) return;
+
+  transitionLock = true;
+
+  try {
+    await callback();
+  } catch (error) {
+    console.error("Transition failed:", error);
+  } finally {
+    setTimeout(() => {
+      transitionLock = false;
+    }, 1500);
+  }
+}
+
 async function playIntro() {
   const station = getCurrentStation();
 
@@ -657,21 +658,27 @@ async function connectToRadio() {
   player.on(AudioPlayerStatus.Idle, async () => {
     if (paused) return;
 
-    if (currentMode === "intro") {
-      await playMain();
-    } else {
-      await playNextStation();
-    }
+    await safeTransition(async () => {
+      if (currentMode === "intro") {
+        await playMain();
+      } else {
+        await playNextStation();
+      }
+    });
   });
 
   player.on("error", async error => {
     console.error("Audio error:", error);
 
-    if (currentMode === "intro") {
-      await playMain();
-    } else {
-      await playNextStation();
-    }
+    setTimeout(() => {
+      safeTransition(async () => {
+        if (currentMode === "intro") {
+          await playMain();
+        } else {
+          await playNextStation();
+        }
+      });
+    }, 3000);
   });
 
   connection.on(VoiceConnectionStatus.Disconnected, async () => {
