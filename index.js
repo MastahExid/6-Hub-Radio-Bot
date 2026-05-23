@@ -1,6 +1,3 @@
-Paste this whole thing into `index.js`. I made it use **FFmpeg direct URL streaming**, added **`!radio testtone`**, added **transition lock**, and removed the old `Readable/prism` method.
-
-```js
 require("dotenv").config();
 
 const express = require("express");
@@ -846,4 +843,3 @@ client.on("messageCreate", async message => {
 });
 
 client.login(TOKEN);
-```
