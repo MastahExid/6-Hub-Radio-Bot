@@ -14,6 +14,7 @@
     "vibesync": "latest",
     "undici": "latest",
     "prism-media": "latest",
-    "ffmpeg-static": "latest"
+    "ffmpeg-static": "latest",
+    "opusscript": "latest"
   }
 }
